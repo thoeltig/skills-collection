@@ -1,0 +1,21 @@
+{
+  "name": "skills-collection",
+  "owner": {
+    "name": "Thore Höltig",
+    "url": "https://github.com/thoeltig"
+  },
+  "metadata": {
+    "description": "Collection of agent skills I often use",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "development",
+      "source": "./plugins/development"
+    },
+    {
+      "name": "documents",
+      "source": "./plugins/documents"
+    }
+  ]
+}
