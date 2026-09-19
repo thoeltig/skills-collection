@@ -1,7 +1,7 @@
 {
   "name": "development",
   "description": "Assertion-driven design and boundary-based error handling for fail-fast code",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Thore Höltig",
     "url": "https://github.com/thoeltig"

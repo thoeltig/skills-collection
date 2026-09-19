@@ -48,18 +48,28 @@ Rules that follow from the ordering:
 - **Turn on everything the toolchain offers before writing a single assert.** Strict compiler flags, warnings as errors, the full analyzer set, typed lint rules. A linter rule that flags a check the type already guarantees is telling you the assertion is dead weight.
 - **A constraint the compiler cannot express becomes a runtime assertion.** "Non-empty", "sums to the same total", "these two ids differ", "this index is within this specific count" — types rarely reach these.
 - **A runtime assertion that has never fired is unverified.** It may be tautological, unreachable, or wrong. Every non-trivial assertion gets a negative test that trips it.
+- **When a field or a case is added to a shared type, let the compiler enumerate every touch point.** Shape the type so the addition cannot compile until each site handles it — a discriminated union with exhaustive matching, a required field, no default. An optional field with a default produces no error at all, and a manual checklist of "places to update" eventually misses one, silently.
 
 See `csharp.md` and `typescript.md` for the concrete toolchain settings and language mechanics.
 
 ## Working method
 
-Three rules about what to *do*, rather than about what the code looks like. Nothing in a diff shows whether they were followed, and in practice they catch more than the code rules do.
+Rules about what to *do*, rather than about what the code looks like. Nothing in a diff shows whether they were followed, and in practice they catch more than the code rules do.
 
-**Before building on data, look at the real data.** A fixture shows what you expected; the source shows what is there. Probe first, then design, then validate against that same source immediately after — not against fixtures written from the same expectation that produced the bug.
+### Before building
 
-**State the limit before you find it.** Covered in full under **Limits** below. Anything that grows gets a bound chosen deliberately and a defined behaviour at that bound; discovering the bound in front of a reader is the failure this prevents.
+- **Before building on data, look at the real data.** A fixture shows what you expected; the source shows what is there. Probe first, then design, then validate against that same source immediately after — not against fixtures written from the same expectation that produced the bug.
+- **State the limit before you find it.** Covered in full under **Limits** below. Anything that grows gets a bound chosen deliberately and a defined behaviour at that bound; discovering the bound in front of a reader is the failure this prevents.
+- **For anything that aggregates, merges or splits, ask what a wrong result would look like.** Where wrong looks the same as right, add the check that tells them apart: a total reached a second way, a count that must conserve down a breakdown, one figure computed by two routes. A wrong merge does not fail — it moves the number under a different name. Silent wrongness needs a check; loud wrongness does not.
 
-**For anything that aggregates, merges or splits, ask what a wrong result would look like.** Where wrong looks the same as right, add the check that tells them apart: a total reached a second way, a count that must conserve down a breakdown, one figure computed by two routes. A wrong merge does not fail — it moves the number under a different name. Silent wrongness needs a check; loud wrongness does not.
+### Before believing a result
+
+The rules above produce findings; these decide whether a finding is real. Each covers a claim that arrives already sounding settled — a clean report, a measurement, a conclusion written down by someone else — and each fails in the same direction, where the wrong answer and the right one are indistinguishable at the moment you would notice.
+
+- **A negative result is only evidence if the tool could have seen a positive one.** "No matches", "no findings", "no change" are claims about the tool as much as about the data. Confirm it detects a known-present case first: a file it silently skipped, a path it never walked, a filter that excluded the match — each produces a clean report indistinguishable from a real one.
+- **A probe is not automatically more trustworthy than the thing it probes.** It is new code with no tests, and a bug in it looks exactly like a real finding. Reconcile its own totals against a count known independently before believing any discrepancy it reports.
+- **A ratio of two summaries answers a different question than the summary of the ratios.** Where the same items produce both numbers, "the typical item's ratio" means divide per item, then summarize those. The ratio of two totals is the overall rate — legitimate, but a different figure and never the typical one. The ratio of two *medians* is neither; nothing is described by it. Name the question before picking the form.
+- **A claim that something cannot be done deserves the same check as a claim that it works.** "Not separable", "cannot be measured", "no route exists" are conclusions, not observations, until someone has run the cheapest version of the attempt. Record the attempt and what it returned, not the conclusion alone — a bare conclusion is cheaper to inherit than to re-test, so it never gets re-tested.
 
 ## Classification: bug or operating condition
 
@@ -335,6 +345,7 @@ Everything grows until something stops it. Choose what stops it, deliberately, i
 - **Bound the run.** A batch takes a maximum item count and a wall-clock ceiling; exceeding either ends the run with a summary, never silently.
 - **Name what happens at the bound.** What is dropped, folded, truncated or rejected is stated in the code and surfaced to the caller. A silent truncation is a wrong answer wearing the costume of a right one.
 - **Work at a pace you control.** Pull in batches rather than reacting per event. This keeps control flow yours, makes the per-period work bound real, and is faster besides.
+- **An intake bound is not a fan-out bound.** Capping what comes in leaves what each input can produce downstream uncapped — one item well inside the intake limit can still expand into unbounded work below it. The fan-out gets its own bound, in its own units, sized from what that downstream work costs rather than scaled off the intake number.
 
 ## Function shape
 
@@ -384,6 +395,8 @@ A function whose X + Y is large is telling you it does too much. Splitting it do
 - Assert on the exception *type* and on the distinguishing part of the message. A test that accepts any exception passes when the code throws for the wrong reason — including a typo raising a `TypeError`.
 - Use the fake wrapper to produce the failure states real IO will not produce on demand.
 - Overlap between an assertion and a test is a failsafe, not duplication. The assertion covers the input the test did not think of.
+- **A structural or derived check — a conservation total, a golden file, a snapshot pin — is unverified until it has been seen to fail.** Same rule as the assertion that has never fired: prove it reports clean when nothing changed *and* reports the change when something did. A check that is silently inert — a wrong anchor, a comparison that never runs — passes by doing nothing, and that reads exactly like proof.
+- **"No caller outside its own test" is a stronger dead-code signal than "no caller."** Dead-code detectors count a test as a legitimate use, which hides exactly this shape: code kept alive only by the test written to cover it, never by anything that runs it in production. The answer is to delete both or to wire it up — not to leave it because the metric is green.
 
 ### What tests cannot cover
 
