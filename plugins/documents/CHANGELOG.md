@@ -15,5 +15,5 @@ _First release._
 - Add `managing-changelog` skill
 - Add `managing-documentation` skill
 
-[1.0.0]: https://github.com/thoeltig/skills-collection/releases/tag/documents--v1.0.0
-[unreleased]: https://github.com/thoeltig/skills-collection/compare/documents--v1.0.0...HEAD
+[unreleased]: https://github.com/thoeltig/skills-collection/compare/Documents_v1.0.0...HEAD
+[1.0.0]: https://github.com/thoeltig/skills-collection/releases/tag/Documents_v1.0.0
