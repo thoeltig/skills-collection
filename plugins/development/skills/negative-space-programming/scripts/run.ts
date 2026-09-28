@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve as resolvePath } from 'node:path';
 
-import { assert } from './contract.js';
+import { assert } from './contract.ts';
 
 export type ToolRun =
   | { readonly ok: true; readonly stdout: string; readonly stderr: string; readonly status: number }

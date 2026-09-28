@@ -26,6 +26,7 @@ export function assert(condition: boolean, message: string): asserts condition {
 /** A single actionable problem. `detail` is the one distinguishing fact, already trimmed. */
 export interface Finding {
   readonly file: string;
+  /** 0 when the tool reports no position (project-level diagnostics); rendered without `:line`. */
   readonly line: number;
   readonly column?: number;
   readonly code: string;
@@ -72,7 +73,8 @@ export function render(report: ToolReport): string {
   const shown = ordered.slice(0, MAX_FINDINGS);
   const lines = shown.map((finding) => {
     const column = finding.column === undefined ? '' : `-${finding.column}`;
-    return `  ${finding.file}:${finding.line}${column}  [${finding.code}] ${finding.detail}`;
+    const location = finding.line > 0 ? `${finding.file}:${finding.line}${column}` : finding.file;
+    return `  ${location}  [${finding.code}] ${finding.detail}`;
   });
 
   const dropped = total - shown.length;

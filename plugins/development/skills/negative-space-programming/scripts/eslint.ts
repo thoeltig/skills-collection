@@ -7,11 +7,11 @@
  * The checked count is the number of files linted. Zero means the config matched nothing, which
  * otherwise exits 0 and looks exactly like a clean codebase.
  *
- *   node eslint.js [target]
+ *   node eslint.ts [target]
  */
 
-import { assert, exitCode, isEntryPoint, render, type Finding, type ToolReport } from './contract.js';
-import { reportRunFailure, runNodeTool } from './run.js';
+import { assert, exitCode, isEntryPoint, render, type Finding, type ToolReport } from './contract.ts';
+import { reportRunFailure, runNodeTool } from './run.ts';
 
 /** Shape of one entry in ESLint's JSON formatter output. Foreign data: validated, never asserted. */
 interface EslintResult {

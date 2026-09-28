@@ -1,5 +1,7 @@
 /**
- * .NET build filter. Runs `dotnet build` with warnings as errors and reports CS/CA diagnostics.
+ * .NET build filter. Runs `dotnet build` with warnings as errors and reports every diagnostic:
+ * located ones (CS/CA/IDE, `file(line,col)`) and project-level ones without a position (NuGet
+ * `NU*`, `MSB*`, `CSC : error`), which would otherwise surface only as an unexplained exit code.
  *
  * `-tl:off` disables the terminal logger, which rewrites lines in place and makes output
  * unparseable. `-v:m` is the lowest verbosity that still prints one `->` line per built project,
@@ -8,16 +10,19 @@
  * msbuild repeats a diagnostic once per project referencing the file, so identical findings are
  * de-duplicated: a shared file with one error must not be reported eleven times.
  *
- *   node dotnet-build.js [Solution.sln]
+ *   node dotnet-build.ts [Solution.sln]
  */
 
-import { assert, exitCode, isEntryPoint, render, type Finding, type ToolReport } from './contract.js';
-import { reportRunFailure, runTool } from './run.js';
+import { assert, exitCode, isEntryPoint, render, type Finding, type ToolReport } from './contract.ts';
+import { reportRunFailure, runTool } from './run.ts';
 
 // path(line,col): error CS8602: message [C:\path\Project.csproj]
 // The trailing project is matched so it is stripped from the detail, but it is NOT counted: msbuild
 // names it by full .csproj path while `->` lines use the short name, so mixing the two double-counts.
 const DIAGNOSTIC = /^(.+?)\((\d+),(\d+)\): (?:error|warning) ([A-Z]+\d+): (.*?)(?:\s\[(?:.+?)\])?$/;
+// C:\path\Project.csproj : error NU1608: message [C:\path\App.sln]   |   MSBUILD : error MSB1009: message
+// `error`/`warning` and the code stay English in localized SDKs; only the message is translated.
+const PROJECT_DIAGNOSTIC = /^(.+?) : (?:error|warning) ([A-Z]+\d+): (.*?)(?:\s\[(?:.+?)\])?$/;
 const BUILT_PROJECT = /^\s*(\S+) -> \S+/;
 
 export interface BuildParse {
@@ -30,33 +35,43 @@ export function parseBuild(output: string): BuildParse {
   const findings: Finding[] = [];
   const projects = new Set<string>();
 
+  const add = (key: string, finding: Finding): void => {
+    if (seen.has(key)) return;
+    seen.add(key);
+    findings.push(finding);
+  };
+
   for (const raw of output.split('\n')) {
-    const line = raw.trimEnd();
+    const line = raw.trim();
     if (line.length === 0) continue;
 
-    if (!line.includes('): ')) {
-      const built = BUILT_PROJECT.exec(line);
-      if (built !== null) projects.add(built[1] as string);
+    const located = DIAGNOSTIC.exec(line);
+    if (located !== null) {
+      const [, file, lineNumber, column, code, detail] = located;
+      assert(file !== undefined && lineNumber !== undefined && code !== undefined, `malformed msbuild diagnostic: ${line}`);
+      add(`${file}:${lineNumber}:${column}:${code}`, {
+        file,
+        line: Number(lineNumber),
+        column: Number(column ?? '0'),
+        code,
+        detail: (detail ?? '').trim(),
+      });
       continue;
     }
 
-    const match = DIAGNOSTIC.exec(line.trim());
-    if (match === null) continue;
+    const projectLevel = PROJECT_DIAGNOSTIC.exec(line);
+    if (projectLevel !== null) {
+      const [, file, code, detail] = projectLevel;
+      assert(file !== undefined && code !== undefined, `malformed msbuild diagnostic: ${line}`);
+      const text = (detail ?? '').trim();
+      // No position to tell repeats apart, and one code often covers several distinct problems
+      // (NU1608 per package), so the message is part of the identity.
+      add(`${file}::${code}:${text}`, { file, line: 0, code, detail: text });
+      continue;
+    }
 
-    const [, file, lineNumber, column, code, detail] = match;
-    assert(file !== undefined && lineNumber !== undefined, `malformed msbuild diagnostic: ${line}`);
-
-    const key = `${file}:${lineNumber}:${column}:${code}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    findings.push({
-      file,
-      line: Number(lineNumber),
-      column: Number(column ?? '0'),
-      code: code ?? 'CS',
-      detail: (detail ?? '').trim(),
-    });
+    const built = BUILT_PROJECT.exec(line);
+    if (built !== null) projects.add(built[1] as string);
   }
 
   return { findings, checked: projects.size };

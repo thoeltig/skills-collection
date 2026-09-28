@@ -14,7 +14,7 @@
  *
  * Install: dotnet tool install --global JetBrains.ReSharper.GlobalTools
  *
- *   node inspectcode.js <Solution.sln> [--no-build]
+ *   node inspectcode.ts <Solution.sln> [--no-build]
  *
  * NOT YET VERIFIED against real jb output. Written to the documented SARIF contract and exercised
  * against a synthetic sample; confirm the shape on first run in the container.
@@ -24,8 +24,8 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { exitCode, isEntryPoint, render, type Finding, type ToolReport } from './contract.js';
-import { reportRunFailure, runTool } from './run.js';
+import { exitCode, isEntryPoint, render, type Finding, type ToolReport } from './contract.ts';
+import { reportRunFailure, runTool } from './run.ts';
 
 /** SARIF levels worth a reader's attention. "note" maps to SUGGESTION and below. */
 const REPORTED_LEVELS = new Set(['error', 'warning']);

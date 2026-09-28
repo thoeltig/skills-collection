@@ -6,11 +6,11 @@
  * supplies the checked count, which is what makes the wrong-include-glob failure visible —
  * a tsconfig that matches nothing exits 0 and looks identical to a clean run.
  *
- *   node tsc.js [tsconfig.json]
+ *   node tsc.ts [tsconfig.json]
  */
 
-import { assert, exitCode, isEntryPoint, render, type Finding, type ToolReport } from './contract.js';
-import { reportRunFailure, runNodeTool } from './run.js';
+import { assert, exitCode, isEntryPoint, render, type Finding, type ToolReport } from './contract.ts';
+import { reportRunFailure, runNodeTool } from './run.ts';
 
 const DIAGNOSTIC = /^(.+?)\((\d+),(\d+)\): (?:error|warning) (TS\d+): (.*)$/;
 const SOURCE_FILE = /\.(?:ts|tsx|mts|cts)$/;
