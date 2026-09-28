@@ -10,6 +10,12 @@ Assertion-driven design from NASA's Power of Ten and TigerStyle, for C# and Type
 
 See [`skills/negative-space-programming/SKILL.md`](./skills/negative-space-programming/SKILL.md).
 
+#### Requirements
+
+- **Filter scripts** (`scripts/*.ts`): Node ≥ 22.18, which runs TypeScript directly — no install, no build step. Run them from the project root: `node <skill-dir>/scripts/<filter>.ts`. Tests: `node --test "<skill-dir>/scripts/*.test.ts"`.
+- **C# tests and coverage**: xUnit v3 on Microsoft.Testing.Platform (`global.json` runner) with `Microsoft.Testing.Extensions.CodeCoverage`. See `setup.md` §4 and `csharp.md`.
+- **TypeScript coverage**: c8 with `--reporter=cobertura`.
+
 ## Installation
 
 ```
