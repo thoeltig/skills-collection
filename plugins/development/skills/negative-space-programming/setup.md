@@ -70,24 +70,36 @@ split exists: language count must not be a structural property of the skill.
 
 ## 3. Filter scripts
 
-TypeScript, not shell: cross-platform, type-checked by the same compiler as the code, and runnable by the Node the project already requires. Thin `npm` scripts are the entry points.
+TypeScript, not shell: cross-platform, type-checked, and runnable by Node without a build step.
 
-`scripts/` in this skill folder ships them. Copy the folder into the project and compile it with the rest of the source — the imports use `.js` extensions, so they run from the build output, the same way the `test` script in `typescript.md` runs the compiled tests.
+`scripts/` in this skill folder ships them. Run them in place from the project root — they check the project in the working directory, wherever the scripts live:
+
+```
+node <skill-dir>/scripts/<filter>.ts <args>
+```
+
+- **Node ≥ 22.18** runs `.ts` directly by stripping the types. That only works for erasable syntax: no `enum`, no `namespace`, no constructor parameter properties. Relative imports carry the `.ts` extension. Keep both when editing a script.
+- **`scripts/package.json` (`"type": "module"`) is required.** Without it a parent `package.json` with `"type": "commonjs"` makes every script fail with `SyntaxError: Cannot use import statement outside a module`.
+- **Tests:** `node --test "<skill-dir>/scripts/*.test.ts"` — `cobertura-samples.ts` builds the reports they use.
+- **Type check:** `tsc --noEmit --allowImportingTsExtensions --erasableSyntaxOnly --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --module nodenext --types node scripts/*.ts` (needs `typescript` and `@types/node`).
 
 | File | Status | Input → output |
 |---|---|---|
 | `contract.ts` | verified | `Finding` / `ToolReport`, `render`, `exitCode`, `collapseRanges`, `isEntryPoint`, and the filters' own `assert` — the scripts are standalone and do not import the project's |
 | `run.ts` | verified | the external boundary — one child process per call → named state |
 | `tsc.ts` | verified end to end | `tsc --noEmit --listFiles` → errors with `file:line-col` |
-| `coverage.ts` | verified | Cobertura XML → uncovered regions, never a percentage |
-| `crap.ts` | verified | Cobertura XML → methods scoring above 30 |
-| `dotnet-build.ts` | parser verified | msbuild log → CS/CA diagnostics, de-duplicated |
+| `cobertura.ts` | verified, tested | the shared reader: report files or directories → classes and methods merged across all reports |
+| `coverage.ts` | verified, tested | Cobertura XML → uncovered regions, never a percentage |
+| `crap.ts` | verified, tested | Cobertura XML → methods scoring above 30 |
+| `dotnet-build.ts` | verified, tested | msbuild log → located CS/CA/IDE diagnostics and project-level `NU*`/`MSB*` diagnostics, de-duplicated |
 | `eslint.ts` | parser verified | `eslint --format=json` → findings with rule id |
 | `inspectcode.ts` | **parser only, unverified** | `jb inspectcode` SARIF → issues at warning and above |
 
 Adding a language adds a row here and a filter in `scripts/`. That is a catalogue entry, not a change to how the pipeline is shaped.
 
-`inspectcode.ts` follows JetBrains' documented SARIF contract and is exercised against a synthetic sample, but has never seen real `jb` output — confirm the shape on first run in the container. The rest were run against real tool output or against captured samples of it.
+`inspectcode.ts` follows JetBrains' documented SARIF contract and is exercised against a synthetic sample, but has never seen real `jb` output — confirm the shape on first run in the container. The rest were run against real tool output or against captured samples of it. `coverage.ts` and `crap.ts` were run against `Microsoft.Testing.Extensions.CodeCoverage` output.
+
+`dotnet-build.ts` reads both diagnostic shapes msbuild writes: located (`path(line,col): error CODE: …`) and project-level without a position (`Project.csproj : error NU1608: …`, `MSBUILD : error MSB1009: …`). The latter render as the file alone, without `:line`. Only a non-zero exit with neither shape in the output falls through to *exited N with no diagnostics* (exit 2). Localized SDKs translate the message but not `error`/`warning` or the code, so parsing does not depend on the SDK language.
 
 ### InspectCode specifics
 
@@ -107,7 +119,9 @@ Both were found by running them, and both silently break a naive implementation:
 - **Never invoke an npm tool through `npx` or `node_modules/.bin`.** On Windows those are `.cmd` shims, and Node refuses to spawn `.cmd` without a shell (the CVE-2024-27980 mitigation, surfacing as `EINVAL`) while `shell: true` is deprecated for argument passing (DEP0190) precisely because it concatenates rather than escapes. Both doors are shut. `run.ts` resolves the package's real entry script and runs it under `process.execPath` instead — no shell, no shim, identical on every platform.
 - **Package resolution anchors to `process.cwd()`, not to the script.** The filters check the project you are in, which may not be where the scripts are installed.
 
-**Cobertura is why one parser serves both languages:** coverlet (`dotnet test --collect:"XPlat Code Coverage"`) and c8/istanbul (`--reporter=cobertura`) both emit it. Note the asymmetry — coverlet writes a `complexity` attribute per method and istanbul does not, so CRAP on TypeScript needs complexity from the ESLint `complexity` rule instead. `crap.ts` detects the missing data and exits 2 rather than reporting a meaningless all-clear.
+**Cobertura is why one parser serves both languages:** `Microsoft.Testing.Extensions.CodeCoverage` (C#) and c8/istanbul (`--reporter=cobertura`) both emit it. Note the asymmetry — the C# emitter writes a `complexity` attribute per method and istanbul does not, so CRAP on TypeScript needs complexity from the ESLint `complexity` rule instead. `crap.ts` detects the missing data and exits 2 rather than reporting a meaningless all-clear.
+
+**All reports are merged before anything is judged.** A test run writes one report per test project and target framework, each covering only what that run executed. `cobertura.ts` merges them: a line is covered when any report hit it, compiler-generated classes (lambda closures, async state machines) are folded into their declaring class, and their methods are named `lambda in Send` / `SendAsync (state machine)`. Pass the results directory, not single files — judging one report lists a gap once per framework and flags every line some other test project covers.
 
 Verified output, the shape every filter produces:
 
@@ -144,10 +158,10 @@ All three are instruments pointed at existing rules. None of them introduces a n
 
 ### Coverage → the X + Y floor
 
-- **C#:** `dotnet test --collect:"XPlat Code Coverage"` — coverlet, Cobertura by default, and the only C# source that carries the per-method `complexity` attribute `crap.ts` needs.
-- **TypeScript:** `node --test --experimental-test-coverage --test-coverage-reporter=cobertura` (Node 22+), or c8 / istanbul with `--reporter=cobertura`.
+- **C#:** `dotnet test --coverage --coverage-output-format cobertura --results-directory TestResults`, then `node <skill-dir>/scripts/coverage.ts TestResults`. Needs the `Microsoft.Testing.Extensions.CodeCoverage` package (`csharp.md`, test projects); it carries the per-method `complexity` attribute `crap.ts` needs and excludes test assemblies by default. Delete `TestResults` before a run: the filters read every report below the directory, including stale ones.
+- **TypeScript:** `c8 --reporter=cobertura --reports-dir=coverage node --test "src/**/*.test.ts"`, then `node <skill-dir>/scripts/coverage.ts coverage`. Node's own test runner writes lcov, not Cobertura.
 
-Both filters in §3 read Cobertura and nothing else. Both commands above ship with the SDK, need no licence and no extra tooling — which is the point: a coverage tool emitting any other format costs a second parser before it reports anything.
+Both filters in §3 read Cobertura and nothing else — which is the point: a coverage tool emitting any other format costs a second parser before it reports anything. Coverage is line-based: a branch that shares a line with executed code (`if (x) return y;`) never shows up as uncovered.
 
 Read it as a *locator*, never as a score. An uncovered line is either a logic step with no test or an assertion that has never been tripped — both are X + Y floor violations with a file and a line attached. The filter reports uncovered regions; it does not report a percentage, because a percentage cannot be acted on and invites gaming.
 
@@ -261,7 +275,7 @@ Mount the source rather than copying it, so edits apply without a rebuild:
 docker run -it -v "$(pwd)":/workspace toolchain /bin/bash
 ```
 
-The ReSharper command line tools are free and run on Linux, which is why they are worth adding here. `dotnet-stryker` is installed for the same reason and is the optional §4 instrument: with it in the image a scheduled pipeline can produce a mutation report without any developer machine carrying the tool. Nothing else in this document needs a licence: coverage comes from the SDK's own collector, and every filter in §3 reads formats those free tools already emit.
+The ReSharper command line tools are free and run on Linux, which is why they are worth adding here. `dotnet-stryker` is installed for the same reason and is the optional §4 instrument: with it in the image a scheduled pipeline can produce a mutation report without any developer machine carrying the tool. Nothing else in this document needs a paid licence: coverage comes from `Microsoft.Testing.Extensions.CodeCoverage` (free, closed-source) and c8, and every filter in §3 reads formats those free tools already emit.
 
 ---
 

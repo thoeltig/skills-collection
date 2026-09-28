@@ -187,6 +187,40 @@ dotnet_diagnostic.CA1062.severity = none    # public-arg null checks — NRT alr
 ```
 
 Pin exact versions in a real project. `JetBrains.Annotations` is a runtime dependency; see the section on what it does and does not enforce below.
+
+### Test projects (xUnit v3)
+
+`global.json` at the solution root. Required on .NET SDK 10+: without it `dotnet test` refuses xUnit v3 projects ("Testing with VSTest target is no longer supported"), and with it every test project in the folders below must run on Microsoft.Testing.Platform.
+
+```json
+{"test":{"runner":"Microsoft.Testing.Platform"}}
+```
+
+```xml
+<PropertyGroup>
+  <IsPackable>false</IsPackable>
+  <IsTestProject>true</IsTestProject>
+</PropertyGroup>
+
+<ItemGroup>
+  <PackageReference Include="xunit.v3" Version="*" />
+  <PackageReference Include="xunit.runner.visualstudio" Version="*" />   <!-- VSTest-based test explorers -->
+  <PackageReference Include="Microsoft.NET.Test.Sdk" Version="*" />
+  <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="*" />   <!-- Cobertura for coverage.ts / crap.ts -->
+</ItemGroup>
+```
+
+- A shared fixture library references `xunit.v3.extensibility.core`, never `xunit.v3`: that package turns the library into a test executable, and MTP fails a run that executes zero tests (exit code 8).
+- `coverlet.collector` is a VSTest data collector and produces nothing under MTP.
+- `AnalysisMode=All` also analyses test code, and two rules collide with test conventions: `CA1707` rejects the underscores in sentence-style test names, and `CA2007` demands `ConfigureAwait(false)`, which xUnit forbids in tests (xUnit1030). Turn both off for test projects only, in the root `.editorconfig`; production code keeps them:
+
+  ```ini
+  [**.Tests/**.cs]
+  dotnet_diagnostic.CA1707.severity = none   # sentence-style test names
+  dotnet_diagnostic.CA2007.severity = none   # xUnit1030: no ConfigureAwait(false) in tests
+  ```
+
+  Match the test **project folder**, not the file name: `[*Tests.cs]` misses fixtures and builders in the same project. `[**.Tests/**.cs]` matches `*.Tests` folders at any depth; `[**/*.Tests/**.cs]` matches none directly under the root, and `[*.Tests/**.cs]` none below it. Without a naming convention, put an `.editorconfig` with a `[*.cs]` section into each test project folder instead.
 ### Flow-analysis attributes are compile-time assertions — the default set
 
 **Use these by default.** They live in `System.Diagnostics.CodeAnalysis`, they are consumed by Roslyn itself, and each one teaches the compiler a fact it then enforces at every call site for free. Prefer one of these to a runtime check whenever the shape allows — a constraint moved here deletes an assertion *and* lowers the test floor.
@@ -611,5 +645,11 @@ public void TryParse_reports_an_over_long_id_as_a_failure() // failure channel, 
 ```
 
 Assert on the type *and* on the distinguishing part of the message — a test that accepts any exception passes when the code throws for the wrong reason. Every named failure variant gets a test that produces it; every non-trivial assertion gets a test that trips it.
+
+xUnit v3 specifics:
+
+- **Pass `TestContext.Current.CancellationToken`** to every async call that accepts a token (analyzer xUnit1051, an error under `TreatWarningsAsErrors`). A cancelled run then stops at the next await instead of finishing every test.
+- **`IAsyncLifetime` returns `ValueTask`** for both `InitializeAsync` and `DisposeAsync`; the v2 `Task` signatures do not compile (CS0738).
+- **A precondition the environment does not meet is a skip, not a pass:** `Assert.Skip("reason")` at run time, or `[Fact(Skip = "reason", SkipUnless = nameof(StaticBoolProperty))]` — `SkipUnless`/`SkipWhen` without `Skip` fails the test at run time. A test that returns early on a missing dependency reports green for something it never checked.
 
 For the crash-only paths, put the assertion behind a seam so the test does not need process isolation: the failsafe takes an injected `Action<Exception>` terminator, and the test asserts it was called with the right exception rather than actually killing the runner.
