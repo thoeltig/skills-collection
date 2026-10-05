@@ -1,0 +1,14 @@
+{
+  "name": "documents",
+  "description": "Standards-based changelog and documentation maintenance skills",
+  "version": "1.0.0",
+  "author": {
+    "name": "Thore Höltig",
+    "url": "https://github.com/thoeltig"
+  },
+  "homepage": "https://github.com/thoeltig/skills-collection",
+  "repository": "https://github.com/thoeltig/skills-collection",
+  "license": "MIT",
+  "keywords": ["changelog", "documentation", "markdown", "technical-writing"],
+  "dependencies": []
+}

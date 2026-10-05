@@ -1,0 +1,4 @@
+node_modules/
+Claude_Temp_Files/
+.DS_Store
+Thumbs.db

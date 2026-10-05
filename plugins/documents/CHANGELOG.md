@@ -1,0 +1,19 @@
+# Changelog
+
+All notable changes documented here.
+Format: [Common Changelog](https://common-changelog.org)
+Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
+
+## [Unreleased]
+
+## [1.0.0] - 2026-09-15
+
+_First release._
+
+### Added
+
+- Add `managing-changelog` skill
+- Add `managing-documentation` skill
+
+[unreleased]: https://github.com/thoeltig/skills-collection/compare/Documents_v1.0.0...HEAD
+[1.0.0]: https://github.com/thoeltig/skills-collection/releases/tag/Documents_v1.0.0
