@@ -1,6 +1,6 @@
 # Skills Collection
 
-A public marketplace of [Claude Code](https://code.claude.com) agent skills, organized by category. New categories are added over time.
+A collection of agent skills for development and documentation.
 
 ## Plugins
 
@@ -25,4 +25,8 @@ Each plugin lives under `plugins/<name>/` with its own `plugin.json` manifest an
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+See root [LICENSE](./LICENSE) for details.
+
+## Author
+
+[Thore Höltig](https://github.com/thoeltig)
