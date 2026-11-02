@@ -1,0 +1,14 @@
+{
+  "name": "agent",
+  "description": "Skills for how agents work in a project: instructions, routing to skills and tools",
+  "version": "1.0.0",
+  "author": {
+    "name": "Thore Höltig",
+    "url": "https://github.com/thoeltig"
+  },
+  "homepage": "https://github.com/thoeltig/skills-collection",
+  "repository": "https://github.com/thoeltig/skills-collection",
+  "license": "MIT",
+  "keywords": ["claude-md", "agents-md", "agent-instructions", "progressive-disclosure"],
+  "dependencies": []
+}
