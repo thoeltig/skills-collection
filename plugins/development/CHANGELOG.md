@@ -6,6 +6,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-02
+
+### Added
+
+- Add rules to `negative-space-programming`: what to do when an assertion fires, one structural writer for shared mutable state, idempotent replay steps, the "returns nothing" test heuristic, and a domain glossary in the agent instructions file
+
 ## [1.1.0] - 2026-09-28
 
 ### Changed
@@ -44,7 +50,8 @@ _First release._
 
 - Add `negative-space-programming` skill
 
-[unreleased]: https://github.com/thoeltig/skills-collection/compare/Development_v1.1.0...HEAD
+[unreleased]: https://github.com/thoeltig/skills-collection/compare/Development_v1.2.0...HEAD
+[1.2.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.1.0...Development_v1.2.0
 [1.1.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.0.1...Development_v1.1.0
 [1.0.1]: https://github.com/thoeltig/skills-collection/compare/Development_v1.0.0...Development_v1.0.1
 [1.0.0]: https://github.com/thoeltig/skills-collection/releases/tag/Development_v1.0.0
