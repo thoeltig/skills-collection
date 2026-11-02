@@ -1,0 +1,12 @@
+{
+  "steps": [
+    {
+      "tool": "node-test",
+      "args": [
+        "plugins/development/hooks/*.test.ts",
+        "plugins/development/skills/negative-space-programming/scripts/*.test.ts"
+      ],
+      "timeoutSeconds": 300
+    }
+  ]
+}
