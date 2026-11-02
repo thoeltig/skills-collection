@@ -235,7 +235,7 @@ The boundary model decides what a file may do. This decides where it sits, so th
 
 **Group by module, not by technical layer.** A module is a capability with a name from the domain — payments, rates, extraction — and it holds everything that capability needs. Grouping by layer instead (`controllers/`, `services/`, `repositories/`) spreads one change across three trees, and puts unrelated code side by side for no better reason than that it sits at the same altitude.
 
-**Keep the domain terms in a glossary, in the project's agent instructions file** (`CLAUDE.md` or equivalent) as a short table of term → meaning, because that file is loaded every session. One term, one meaning: a name that means two things depending on the module is a type error the compiler cannot see.
+**Keep the domain terms in a glossary, in the project's agent instructions file** (`CLAUDE.md` or equivalent) as a short table of term → meaning, because that file is loaded every session (`agent:managing-agent-instructions` sets it up). One term, one meaning: a name that means two things depending on the module is a type error the compiler cannot see.
 
 **Inside a module the shape is the same in every module.** The names are fixed; the nesting appears only when a part outgrows a file or two. A five-file module is five files, not four folders holding one each.
 
