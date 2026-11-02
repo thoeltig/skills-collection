@@ -71,6 +71,11 @@ The rules above produce findings; these decide whether a finding is real. Each c
 - **A ratio of two summaries answers a different question than the summary of the ratios.** Where the same items produce both numbers, "the typical item's ratio" means divide per item, then summarize those. The ratio of two totals is the overall rate — legitimate, but a different figure and never the typical one. The ratio of two *medians* is neither; nothing is described by it. Name the question before picking the form.
 - **A claim that something cannot be done deserves the same check as a claim that it works.** "Not separable", "cannot be measured", "no route exists" are conclusions, not observations, until someone has run the cheapest version of the attempt. Record the attempt and what it returned, not the conclusion alone — a bare conclusion is cheaper to inherit than to re-test, so it never gets re-tested.
 
+### When an assertion fires
+
+- **The fix is upstream of the assertion, never at it.** Loosening the check, or adding a guard before it so it is no longer reached, turns a loud failure back into a silent one. Reproduce the firing as a test, then fix the code that produced the value.
+- **The one exception is a misclassification.** If the value turns out to originate outside the program, the assertion was the wrong channel: move the check to the boundary as a typed failure. That is a reclassification, not a softening — the check stays as strict.
+
 ## Classification: bug or operating condition
 
 This is the decision that everything else depends on, and it is the one most often gotten wrong.
@@ -230,6 +235,8 @@ The boundary model decides what a file may do. This decides where it sits, so th
 
 **Group by module, not by technical layer.** A module is a capability with a name from the domain — payments, rates, extraction — and it holds everything that capability needs. Grouping by layer instead (`controllers/`, `services/`, `repositories/`) spreads one change across three trees, and puts unrelated code side by side for no better reason than that it sits at the same altitude.
 
+**Keep the domain terms in a glossary, in the project's agent instructions file** (`CLAUDE.md` or equivalent) as a short table of term → meaning, because that file is loaded every session. One term, one meaning: a name that means two things depending on the module is a type error the compiler cannot see.
+
 **Inside a module the shape is the same in every module.** The names are fixed; the nesting appears only when a part outgrows a file or two. A five-file module is five files, not four folders holding one each.
 
 | Part | Boundary zone | Holds |
@@ -273,11 +280,13 @@ The places that most need an assertion are the places tests reach least — unte
 
 **Suspension invalidates preconditions.** A precondition asserted on entry holds for the rest of the function only if the function runs to completion without suspending. Every `await`, `yield` and callback boundary is a point where other code runs and shared state can change, so an assertion made before the suspension says nothing about the state after it.
 
+- **First remove the sharing.** If two actors do not need the same mutable thing, give each its own. If they do, allow exactly one writer and make that structural — one owner holds the only mutable reference, everyone else gets a read-only view or sends it a message. A second writer that cannot be written needs no re-assertion.
 - Prefer functions that do not suspend between asserting a property and using it. Fetch first, then compute in a straight line.
 - Where a suspension is unavoidable and the value still matters, **re-assert after it**, and treat that as a pair of assertions on independent paths rather than a duplicate.
 - Never assert a property of shared mutable state and then `await` before acting on it. That is the async form of TOCTOU: check and use are separated in time, so the check guarantees nothing.
 
 This applies only to state something else can reach. A function's own locals and its immutable parameters are unaffected by a suspension, so re-asserting those is the noise this rule is not asking for.
+
 **Messages** state the expected condition in domain terms and carry the actual value:
 
 ```
@@ -334,6 +343,8 @@ order.Status = nextStatus;    // nothing between the last check and the commit
 ```
 
 Where a sequence of commits cannot be collapsed into one, put the durable record first: append the intent to a log, then mutate. A crash mid-mutation is then recoverable by replay, and the recovery path is one code path used on every start rather than an exception path used once a year.
+
+Replay is only correct if every step is **idempotent**: running it twice, or again after a crash halfway through, ends in the same state as running it once. Test exactly that — run the step, run it again, and compare the state byte for byte; then interrupt it midway, rerun, and compare again.
 
 ## Limits: state the bound before you find it
 
@@ -393,6 +404,7 @@ A function whose X + Y is large is telling you it does too much. Splitting it do
 - **Test valid data, invalid data, and valid data becoming invalid.** The third is where the interesting bugs are: a record that passed validation and was then mutated past the boundary.
 - **Every named failure variant has a test that produces it.** A failure type nothing constructs is either dead or a lie about the fault model.
 - Assert on the exception *type* and on the distinguishing part of the message. A test that accepts any exception passes when the code throws for the wrong reason — including a typo raising a `TypeError`.
+- **If the test would still pass with every function returning nothing, it tests nothing.** That is a mutation test you can run in your head while writing it; the tool in `setup.md` §4 only confirms it later.
 - Use the fake wrapper to produce the failure states real IO will not produce on demand.
 - Overlap between an assertion and a test is a failsafe, not duplication. The assertion covers the input the test did not think of.
 - **A structural or derived check — a conservation total, a golden file, a snapshot pin — is unverified until it has been seen to fail.** Same rule as the assertion that has never fired: prove it reports clean when nothing changed *and* reports the change when something did. A check that is silently inert — a wrong anchor, a comparison that never runs — passes by doing nothing, and that reads exactly like proof.
@@ -463,6 +475,8 @@ The style has a cost and there are places it does not pay.
 - Any assertion the compiler could have made unnecessary?
 - Any assertion without a test that trips it?
 - Any state mutated before the last check that governs it?
+- Any shared mutable state with more than one writer, or a replayed step that is not idempotent?
+- Any assertion loosened or guarded around instead of fixing the code that tripped it?
 - Does each message carry the offending value and read correctly alone in a log line?
 
 ## Where to go next
