@@ -8,6 +8,7 @@ A collection of agent skills for development and documentation.
 |---|---|---|
 | [development](./plugins/development) | Assertion-driven design and boundary-based error handling for fail-fast code | negative-space-programming |
 | [documents](./plugins/documents) | Standards-based changelog and documentation maintenance | managing-changelog, managing-documentation |
+| [agent](./plugins/agent) | How agents work in a project: instructions, routing to skills and tools | managing-agent-instructions |
 
 ## Installation
 
@@ -17,6 +18,7 @@ Add this repository as a marketplace, then install the plugins you need:
 /plugin marketplace add thoeltig/skills-collection
 /plugin install development@skills-collection
 /plugin install documents@skills-collection
+/plugin install agent@skills-collection
 ```
 
 ## Structure
