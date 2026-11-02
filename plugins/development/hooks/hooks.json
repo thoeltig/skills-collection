@@ -1,0 +1,39 @@
+{
+  "hooks": {
+    "SubagentStart": [
+      {
+        "matcher": "^development:(coder|verifier)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/build-check.ts\"",
+            "timeout": 1800
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "^development:coder$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/build-check.ts\"",
+            "timeout": 1800
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/build-check.ts\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
