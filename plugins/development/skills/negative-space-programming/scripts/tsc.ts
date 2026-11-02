@@ -9,8 +9,18 @@
  *   node tsc.ts [tsconfig.json]
  */
 
-import { assert, exitCode, isEntryPoint, render, type Finding, type ToolReport } from './contract.ts';
-import { reportRunFailure, runNodeTool } from './run.ts';
+import {
+  assert,
+  exitCode,
+  isEntryPoint,
+  render,
+  reportCheckFailure,
+  type CheckResult,
+  type Finding,
+} from './contract.ts';
+import { DEFAULT_TIMEOUT_MS, runNodeTool } from './run.ts';
+
+const TOOL = 'tsc';
 
 const DIAGNOSTIC = /^(.+?)\((\d+),(\d+)\): (?:error|warning) (TS\d+): (.*)$/;
 const SOURCE_FILE = /\.(?:ts|tsx|mts|cts)$/;
@@ -49,28 +59,35 @@ export function parseTsc(output: string): TscParse {
   return { findings, checked: checkedFiles.size };
 }
 
-function main(argv: readonly string[]): number {
-  const project = argv[0];
+export function checkTsc(
+  project: string | undefined,
+  cwd: string = process.cwd(),
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): CheckResult {
   const args = ['--noEmit', '--pretty', 'false', '--listFiles'];
   if (project !== undefined) args.push('-p', project);
 
-  const run = runNodeTool('typescript', 'tsc', args);
-  if (!run.ok) return reportRunFailure('tsc', run);
+  const run = runNodeTool('typescript', 'tsc', args, timeoutMs, cwd);
+  if (!run.ok) return { ok: false, tool: TOOL, reason: run.reason, detail: run.detail };
 
   const { findings, checked } = parseTsc(`${run.stdout}\n${run.stderr}`);
 
   // tsc exits non-zero with no parseable diagnostic only when the invocation itself was wrong
   // (a bad flag, a missing tsconfig). That is a run failure, not a clean codebase.
   if (run.status !== 0 && findings.length === 0) {
-    process.stderr.write(`✖ tsc: exited ${run.status} with no diagnostics\n${run.stdout.slice(0, 2000)}\n`);
-    return 2;
+    const detail = `exited ${run.status} with no diagnostics\n${run.stdout.slice(0, 2000)}`;
+    return { ok: false, tool: TOOL, reason: 'NoDiagnostics', detail };
   }
 
   assert(checked > 0, 'tsc checked 0 source files — the include glob matches nothing');
+  return { ok: true, report: { tool: TOOL, checked, findings } };
+}
 
-  const report: ToolReport = { tool: 'tsc', checked, findings };
-  process.stdout.write(render(report));
-  return exitCode(report);
+function main(argv: readonly string[]): number {
+  const result = checkTsc(argv[0]);
+  if (!result.ok) return reportCheckFailure(result);
+  process.stdout.write(render(result.report));
+  return exitCode(result.report);
 }
 
 if (isEntryPoint(import.meta.url)) process.exitCode = main(process.argv.slice(2));

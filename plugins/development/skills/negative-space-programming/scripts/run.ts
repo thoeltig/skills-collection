@@ -22,9 +22,11 @@ export const DEFAULT_TIMEOUT_MS = 600_000;
 /** Output ceiling. A first run on an unchecked codebase can emit tens of megabytes. */
 const MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
 
-function options(timeoutMs: number) {
+function options(timeoutMs: number, cwd: string, env: NodeJS.ProcessEnv) {
   return {
     encoding: 'utf8' as const,
+    cwd,
+    env,
     timeout: timeoutMs,
     maxBuffer: MAX_OUTPUT_BYTES,
     shell: false,
@@ -35,13 +37,15 @@ export function runTool(
   command: string,
   args: readonly string[],
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
+  cwd: string = process.cwd(),
+  env: NodeJS.ProcessEnv = process.env,
 ): ToolRun {
   assert(command.length > 0, 'command must be a non-empty executable name');
   assert(timeoutMs > 0, `timeoutMs must be > 0, got ${timeoutMs}`);
 
   let result: ReturnType<typeof spawnSync>;
   try {
-    result = spawnSync(command, [...args], options(timeoutMs));
+    result = spawnSync(command, [...args], options(timeoutMs, cwd, env));
   } catch (error: unknown) {
     return { ok: false, reason: 'Failed', detail: String(error) };
   }
@@ -72,13 +76,13 @@ export function runTool(
  * rather than escapes. Resolving the real JS entry and running it under `process.execPath` sidesteps
  * both, and behaves identically on every platform.
  */
-export function resolveNodeBin(packageName: string, binName: string): string | null {
+export function resolveNodeBin(packageName: string, binName: string, cwd: string = process.cwd()): string | null {
   assert(packageName.length > 0, 'packageName must not be empty');
   assert(binName.length > 0, 'binName must not be empty');
 
-  // Anchored to the working directory, not to this module: the filter checks the project you are
-  // in, and the scripts may well be installed somewhere else entirely.
-  const require = createRequire(resolvePath(process.cwd(), '__resolve__.js'));
+  // Anchored to the checked project, not to this module: the scripts may well be installed
+  // somewhere else entirely.
+  const require = createRequire(resolvePath(cwd, '__resolve__.js'));
 
   let manifestPath: string;
   try {
@@ -105,12 +109,13 @@ export function runNodeTool(
   binName: string,
   args: readonly string[],
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
+  cwd: string = process.cwd(),
 ): ToolRun {
-  const entry = resolveNodeBin(packageName, binName);
+  const entry = resolveNodeBin(packageName, binName, cwd);
   if (entry === null) {
     return { ok: false, reason: 'NotInstalled', detail: `${packageName} (bin: ${binName})` };
   }
-  return runTool(process.execPath, [entry, ...args], timeoutMs);
+  return runTool(process.execPath, [entry, ...args], timeoutMs, cwd);
 }
 
 /** Uniform exit for a tool that could not be run at all. Distinct from "ran and found problems". */

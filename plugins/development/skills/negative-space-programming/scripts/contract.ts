@@ -1,3 +1,4 @@
+import { isAbsolute, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 /**
@@ -31,14 +32,23 @@ export interface Finding {
   readonly column?: number;
   readonly code: string;
   readonly detail: string;
+  /** Full name of the failed test; set only by test filters. Its identity across runs, as lines and messages shift. */
+  readonly test?: string;
 }
 
 export interface ToolReport {
   readonly tool: string;
   /** Units examined — files, classes, methods, tests. Reported so a silent no-op is visible. */
   readonly checked: number;
+  /** Units found but not run (skipped, todo). Absent for tools without that notion. */
+  readonly skipped?: number;
   readonly findings: readonly Finding[];
 }
+
+/** A filter's outcome: its report, or why the tool could not produce one. Distinct from "ran and found problems". */
+export type CheckResult =
+  | { readonly ok: true; readonly report: ToolReport }
+  | { readonly ok: false; readonly tool: string; readonly reason: string; readonly detail: string };
 
 /**
  * Output bound. A first run on an untested codebase can produce thousands of findings; the cap
@@ -62,10 +72,11 @@ export function render(report: ToolReport): string {
   assert(report.checked >= 0, `report.checked must be >= 0, got ${report.checked}`);
 
   const total = report.findings.length;
+  const skipped = report.skipped === undefined || report.skipped === 0 ? '' : `, ${report.skipped} skipped`;
   const tally =
     total === 0
-      ? `✓ ${report.tool}: ${report.checked} checked, 0 findings`
-      : `✖ ${report.tool}: ${report.checked} checked, ${total} findings`;
+      ? `✓ ${report.tool}: ${report.checked} checked${skipped}, 0 findings`
+      : `✖ ${report.tool}: ${report.checked} checked${skipped}, ${total} findings`;
 
   if (total === 0) return `${tally}\n`;
 
@@ -74,13 +85,20 @@ export function render(report: ToolReport): string {
   const lines = shown.map((finding) => {
     const column = finding.column === undefined ? '' : `-${finding.column}`;
     const location = finding.line > 0 ? `${finding.file}:${finding.line}${column}` : finding.file;
-    return `  ${location}  [${finding.code}] ${finding.detail}`;
+    const test = finding.test === undefined ? '' : `${finding.test}: `;
+    return `  ${location}  [${finding.code}] ${test}${finding.detail}`;
   });
 
   const dropped = total - shown.length;
   if (dropped > 0) lines.push(`  …and ${dropped} more (cap ${MAX_FINDINGS})`);
 
   return `${tally}\n${lines.join('\n')}\n`;
+}
+
+/** Uniform exit for a tool that could not produce a report. Exit 2, distinct from "ran and found problems". */
+export function reportCheckFailure(failure: Extract<CheckResult, { ok: false }>): number {
+  process.stderr.write(`✖ ${failure.tool}: ${failure.reason} — ${failure.detail}\n`);
+  return 2;
 }
 
 /** The filter is the gate, not a viewer: any finding fails the step. */
@@ -96,6 +114,27 @@ export function isEntryPoint(moduleUrl: string): boolean {
   const entry = process.argv[1];
   if (entry === undefined) return false;
   return moduleUrl === pathToFileURL(entry).href;
+}
+
+/**
+ * A path relative to the checked project with forward slashes, or undefined when it lies outside it
+ * (a framework frame, another drive). Lets a test filter pick the stack frame that is ours.
+ */
+export function projectRelative(cwd: string, file: string): string | undefined {
+  const path = relative(cwd, file);
+  if (path.length === 0 || path.startsWith('..') || isAbsolute(path)) return undefined;
+  return path.replaceAll('\\', '/');
+}
+
+/** A multi-line tool message as one line: non-empty lines joined, whitespace collapsed, capped at `max` characters. */
+export function oneLine(text: string, max: number = 200): string {
+  assert(max > 1, `oneLine max must be > 1, got ${max}`);
+  const joined = text
+    .split('\n')
+    .map((line) => line.trim().replace(/\s+/g, ' '))
+    .filter((line) => line.length > 0)
+    .join(' · ');
+  return joined.length <= max ? joined : `${joined.slice(0, max - 1)}…`;
 }
 
 /** Collapses [12,13,14,88] to "12-14, 88". Keeps long runs from filling the line. */
