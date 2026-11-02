@@ -371,6 +371,7 @@ That is the shape of a function in **the middle**. A wrapper method follows the 
 - **Push `if`s up and `for`s down.** The parent owns branching and state; leaves are pure and do straight-line work. Assertions in a pure leaf hold for its whole lifetime and are worth more.
 - Declare each variable at the smallest scope, close to its use. Never keep two names for the same value — duplicates drift apart, and the check reads the stale one.
 - **Return the simplest type that carries the meaning.** Every extra state in a return type becomes a branch in every caller, and that dimensionality is viral: `void` over `bool`, `bool` over a value, a plain value over an optional, an optional over a result type.
+- **A boolean parameter that switches behaviour becomes two functions or a closed union.** `export(report, true)` hides at the call site which behaviour runs, and every flag doubles the paths one function must hold. Name each behaviour instead.
 - State invariants positively. `if (index < count)` is easier to get right than `if (index >= count)` with the negation carried in the reader's head.
 - Prefer non-throwing APIs where the library offers both, and pass options explicitly at the call site rather than inheriting a default that may change.
 - Fail once, loudly. No retry around a bug, no defensive re-check that quietly repairs an impossible state.
