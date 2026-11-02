@@ -1,7 +1,7 @@
 {
   "name": "development",
   "description": "Assertion-driven design and boundary-based error handling for fail-fast code, with agents and a build check for delegated work",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "author": {
     "name": "Thore Höltig",
     "url": "https://github.com/thoeltig"

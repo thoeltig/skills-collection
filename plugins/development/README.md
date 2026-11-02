@@ -38,6 +38,12 @@ Runs the project's build and tests around delegated work, so an agent knows what
 
 The output is a headline per step, then findings grouped by code. Tests failing for one cause are grouped as well. Output is capped at 15 lines per step. Results are cached per tree state and session. Everything is deleted when the session ends; data of sessions that never ended is swept after 7 days.
 
+### Bash guard
+
+A PreToolUse hook limits Bash for `coder` and `verifier`, registered in `hooks/hooks.json` because the same hook in a plugin agent's frontmatter did not take effect. Both may run the build and test filter scripts (`node <scripts>/dotnet-build.ts`, `dotnet-test.ts`, `node-test.ts`, `tsc.ts`); `verifier` also read-only git (`diff`, `status`, `log`, `show`, `rev-parse`, optionally `-C <path>`, never `--output` or `--ext-diff`). Shell operators, substitutions and backslash escapes are refused, one command per call. A denied call tells the agent the allowed commands with full paths. Allowed commands still go through your permission settings; the hook only denies. Scoped to these two agents; the main session and other agents are not checked.
+
+It is a guardrail, not a sandbox: a test run executes whatever code the agent wrote.
+
 ### Configuration
 
 Create `.claude/build-check.json` in the project. Without the file, the hook does nothing.

@@ -6,6 +6,22 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-02
+
+### Changed
+
+- Let `coder` follow the preloaded `negative-space-programming` skill instead of invoking it a second time, and drop its `Skill` tool
+
+### Added
+
+- Add a Bash guard hook: `coder` and `verifier` may only run the build and test filter scripts, `verifier` also read-only git
+
+### Fixed
+
+- Fix `verifier` lacking the Bash tool it needs for `git diff` and test runs
+- Fix `coder` lacking Bash although it is told to run builds and tests
+- Remove the malformed `mcpServers` field from `coder`
+
 ## [1.3.0] - 2026-11-02
 
 ### Added
@@ -63,7 +79,8 @@ _First release._
 
 - Add `negative-space-programming` skill
 
-[unreleased]: https://github.com/thoeltig/skills-collection/compare/Development_v1.3.0...HEAD
+[unreleased]: https://github.com/thoeltig/skills-collection/compare/Development_v1.4.0...HEAD
+[1.4.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.3.0...Development_v1.4.0
 [1.3.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.2.0...Development_v1.3.0
 [1.2.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.1.0...Development_v1.2.0
 [1.1.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.0.1...Development_v1.1.0
