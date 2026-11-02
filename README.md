@@ -6,7 +6,7 @@ A collection of agent skills for development and documentation.
 
 | Plugin | Description | Skills |
 |---|---|---|
-| [development](./plugins/development) | Assertion-driven design and boundary-based error handling for fail-fast code | negative-space-programming |
+| [development](./plugins/development) | Assertion-driven design and boundary-based error handling for fail-fast code, with agents and a build check for delegated work | negative-space-programming |
 | [documents](./plugins/documents) | Standards-based changelog and documentation maintenance | managing-changelog, managing-documentation |
 | [agent](./plugins/agent) | How agents work in a project: instructions, routing to skills and tools | managing-agent-instructions |
 

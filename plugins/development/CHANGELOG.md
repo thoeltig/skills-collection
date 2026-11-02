@@ -6,6 +6,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-02
+
+### Added
+
+- Add `coder`, `explorer` and `verifier` agents for delegated implementation, verbatim search and independent review
+- Add a build-check hook that gives `coder` and `verifier` the build and test state at start and blocks a `coder` from finishing with new failures, configured by `.claude/build-check.json`
+- Add `dotnet-test.ts` (xUnit v3 TRX) and `node-test.ts` with `node-test-reporter.ts` filters to `negative-space-programming`
+- Add the rule that a boolean parameter switching behaviour becomes two functions or a closed union
+
+### Changed
+
+- Export `checkBuild` and `checkTsc` from the build filters and accept a working directory in `runTool` and `runNodeTool`, so the filters can be called from code
+
 ## [1.2.0] - 2026-11-02
 
 ### Added
@@ -50,7 +63,8 @@ _First release._
 
 - Add `negative-space-programming` skill
 
-[unreleased]: https://github.com/thoeltig/skills-collection/compare/Development_v1.2.0...HEAD
+[unreleased]: https://github.com/thoeltig/skills-collection/compare/Development_v1.3.0...HEAD
+[1.3.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.2.0...Development_v1.3.0
 [1.2.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.1.0...Development_v1.2.0
 [1.1.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.0.1...Development_v1.1.0
 [1.0.1]: https://github.com/thoeltig/skills-collection/compare/Development_v1.0.0...Development_v1.0.1
