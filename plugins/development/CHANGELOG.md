@@ -6,6 +6,66 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-08
+
+### Changed
+
+- Make `verifier` a code review only: it runs no builds or tests and expects a change that already builds and passes
+- Run the build check only around `coder`; `verifier` no longer gets the start state
+- Run the build check on every `coder` stop, also when nothing changed
+
+### Removed
+
+- Remove the build check's result cache and tree hash
+- Remove the sweep of session data left by sessions that never ended
+
+## [1.4.1] - 2026-11-08
+
+### Changed
+
+- Let `coder` inherit the main session's tools instead of a fixed list
+- Let `verifier` use every tool except `Edit`, `Write`, `NotebookEdit` and `batch_edit` instead of a fixed list
+- Load CLAUDE.md files in `explorer`, so project maps and orientation notes guide its search
+
+### Removed
+
+- Remove the Bash guard hook; Bash calls of `coder` and `verifier` go through the normal permission settings
+
+## [1.4.0] - 2026-11-02
+
+### Changed
+
+- Let `coder` follow the preloaded `negative-space-programming` skill instead of invoking it a second time, and drop its `Skill` tool
+
+### Added
+
+- Add a Bash guard hook: `coder` and `verifier` may only run the build and test filter scripts, `verifier` also read-only git
+
+### Fixed
+
+- Fix `verifier` lacking the Bash tool it needs for `git diff` and test runs
+- Fix `coder` lacking Bash although it is told to run builds and tests
+- Remove the malformed `mcpServers` field from `coder`
+
+## [1.3.0] - 2026-11-02
+
+### Added
+
+- Add `coder`, `explorer` and `verifier` agents for delegated implementation, verbatim search and independent review
+- Add a build-check hook that gives `coder` and `verifier` the build and test state at start and blocks a `coder` from finishing with new failures, configured by `.claude/build-check.json`
+- Add `dotnet-test.ts` (xUnit v3 TRX) and `node-test.ts` with `node-test-reporter.ts` filters to `negative-space-programming`
+- Add the rule that a boolean parameter switching behaviour becomes two functions or a closed union
+
+### Changed
+
+- Export `checkBuild` and `checkTsc` from the build filters and accept a working directory in `runTool` and `runNodeTool`, so the filters can be called from code
+
+## [1.2.0] - 2026-11-02
+
+### Added
+
+- Add rules to `negative-space-programming`: what to do when an assertion fires, one structural writer for shared mutable state, idempotent replay steps, the "returns nothing" test heuristic, and a domain glossary in the agent instructions file
+
 ## [1.1.0] - 2026-09-28
 
 ### Changed
@@ -44,7 +104,12 @@ _First release._
 
 - Add `negative-space-programming` skill
 
-[unreleased]: https://github.com/thoeltig/skills-collection/compare/Development_v1.1.0...HEAD
+[unreleased]: https://github.com/thoeltig/skills-collection/compare/Development_v1.5.0...HEAD
+[1.5.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.4.1...Development_v1.5.0
+[1.4.1]: https://github.com/thoeltig/skills-collection/compare/Development_v1.4.0...Development_v1.4.1
+[1.4.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.3.0...Development_v1.4.0
+[1.3.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.2.0...Development_v1.3.0
+[1.2.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.1.0...Development_v1.2.0
 [1.1.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.0.1...Development_v1.1.0
 [1.0.1]: https://github.com/thoeltig/skills-collection/compare/Development_v1.0.0...Development_v1.0.1
 [1.0.0]: https://github.com/thoeltig/skills-collection/releases/tag/Development_v1.0.0

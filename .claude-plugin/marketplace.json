@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Collection of agent skills I often use",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "plugins": [
     {
@@ -16,6 +16,10 @@
     {
       "name": "documents",
       "source": "./plugins/documents"
+    },
+    {
+      "name": "agent",
+      "source": "./plugins/agent"
     }
   ]
 }

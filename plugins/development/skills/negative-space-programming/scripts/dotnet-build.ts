@@ -13,8 +13,18 @@
  *   node dotnet-build.ts [Solution.sln]
  */
 
-import { assert, exitCode, isEntryPoint, render, type Finding, type ToolReport } from './contract.ts';
-import { reportRunFailure, runTool } from './run.ts';
+import {
+  assert,
+  exitCode,
+  isEntryPoint,
+  render,
+  reportCheckFailure,
+  type CheckResult,
+  type Finding,
+} from './contract.ts';
+import { DEFAULT_TIMEOUT_MS, runTool } from './run.ts';
+
+const TOOL = 'dotnet-build';
 
 // path(line,col): error CS8602: message [C:\path\Project.csproj]
 // The trailing project is matched so it is stripped from the detail, but it is NOT counted: msbuild
@@ -77,22 +87,23 @@ export function parseBuild(output: string): BuildParse {
   return { findings, checked: projects.size };
 }
 
-function main(argv: readonly string[]): number {
+export function checkBuild(
+  target: string | undefined,
+  cwd: string = process.cwd(),
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): CheckResult {
   const args = ['build', '--nologo', '-v:m', '-tl:off', '-p:TreatWarningsAsErrors=true'];
-  const target = argv[0];
   if (target !== undefined) args.splice(1, 0, target);
 
-  const run = runTool('dotnet', args);
-  if (!run.ok) return reportRunFailure('dotnet-build', run);
+  const run = runTool('dotnet', args, timeoutMs, cwd);
+  if (!run.ok) return { ok: false, tool: TOOL, reason: run.reason, detail: run.detail };
 
   const { findings, checked } = parseBuild(`${run.stdout}\n${run.stderr}`);
 
   // A non-zero exit with nothing parseable means the invocation failed, not that the code is clean.
   if (run.status !== 0 && findings.length === 0) {
-    process.stderr.write(
-      `\u2716 dotnet-build: exited ${run.status} with no diagnostics\n${run.stdout.slice(0, 2000)}\n`,
-    );
-    return 2;
+    const detail = `exited ${run.status} with no diagnostics\n${run.stdout.slice(0, 2000)}`;
+    return { ok: false, tool: TOOL, reason: 'NoDiagnostics', detail };
   }
 
   // Only meaningful on success: a failed build legitimately produces no `->` lines.
@@ -100,9 +111,14 @@ function main(argv: readonly string[]): number {
     assert(checked > 0, 'dotnet build succeeded having built 0 projects - wrong target?');
   }
 
-  const report: ToolReport = { tool: 'dotnet-build', checked, findings };
-  process.stdout.write(render(report));
-  return exitCode(report);
+  return { ok: true, report: { tool: TOOL, checked, findings } };
+}
+
+function main(argv: readonly string[]): number {
+  const result = checkBuild(argv[0]);
+  if (!result.ok) return reportCheckFailure(result);
+  process.stdout.write(render(result.report));
+  return exitCode(result.report);
 }
 
 if (isEntryPoint(import.meta.url)) process.exitCode = main(process.argv.slice(2));
