@@ -6,6 +6,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-02
+
+### Added
+
+- Add `agent` plugin with the `managing-agent-instructions` skill
+
 ## [1.0.0] - 2026-09-15
 
 _First release._
@@ -15,5 +21,6 @@ _First release._
 - Add `development` plugin with the `negative-space-programming` skill
 - Add `documents` plugin with the `managing-changelog` and `managing-documentation` skills
 
-[unreleased]: https://github.com/thoeltig/skills-collection/compare/v1.0.0...HEAD
+[unreleased]: https://github.com/thoeltig/skills-collection/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/thoeltig/skills-collection/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/thoeltig/skills-collection/releases/tag/v1.0.0

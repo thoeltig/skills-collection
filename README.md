@@ -1,13 +1,14 @@
 # Skills Collection
 
-A public marketplace of [Claude Code](https://code.claude.com) agent skills, organized by category. New categories are added over time.
+A collection of agent skills for development and documentation.
 
 ## Plugins
 
 | Plugin | Description | Skills |
 |---|---|---|
-| [development](./plugins/development) | Assertion-driven design and boundary-based error handling for fail-fast code | negative-space-programming |
+| [development](./plugins/development) | Assertion-driven design and boundary-based error handling for fail-fast code, with agents and a build check for delegated work | negative-space-programming |
 | [documents](./plugins/documents) | Standards-based changelog and documentation maintenance | managing-changelog, managing-documentation |
+| [agent](./plugins/agent) | How agents work in a project: instructions, routing to skills and tools | managing-agent-instructions |
 
 ## Installation
 
@@ -17,6 +18,7 @@ Add this repository as a marketplace, then install the plugins you need:
 /plugin marketplace add thoeltig/skills-collection
 /plugin install development@skills-collection
 /plugin install documents@skills-collection
+/plugin install agent@skills-collection
 ```
 
 ## Structure
@@ -25,4 +27,8 @@ Each plugin lives under `plugins/<name>/` with its own `plugin.json` manifest an
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+See root [LICENSE](./LICENSE) for details.
+
+## Author
+
+[Thore Höltig](https://github.com/thoeltig)

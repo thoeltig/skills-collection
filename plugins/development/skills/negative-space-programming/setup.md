@@ -92,6 +92,8 @@ node <skill-dir>/scripts/<filter>.ts <args>
 | `coverage.ts` | verified, tested | Cobertura XML → uncovered regions, never a percentage |
 | `crap.ts` | verified, tested | Cobertura XML → methods scoring above 30 |
 | `dotnet-build.ts` | verified, tested | msbuild log → located CS/CA/IDE diagnostics and project-level `NU*`/`MSB*` diagnostics, de-duplicated |
+| `dotnet-test.ts` | verified end to end, tested | `dotnet test <args> --report-xunit-trx` (xUnit v3 on Microsoft.Testing.Platform) → TRX → failed tests at their innermost project frame, one finding per test across target frameworks |
+| `node-test.ts` | verified end to end, tested | `node --test <args>` with `node-test-reporter.ts` → failed tests at their innermost project frame; suites that failed only through their children are not counted twice |
 | `eslint.ts` | parser verified | `eslint --format=json` → findings with rule id |
 | `inspectcode.ts` | **parser only, unverified** | `jb inspectcode` SARIF → issues at warning and above |
 
