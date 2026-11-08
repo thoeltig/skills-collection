@@ -10,7 +10,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Changed
 
-- Let `coder` inherit the main session's tools instead of a fixed list, which also gives it the `Skill` tool back
+- Let `coder` inherit the main session's tools instead of a fixed list
 - Let `verifier` use every tool except `Edit`, `Write`, `NotebookEdit` and `batch_edit` instead of a fixed list
 - Load CLAUDE.md files in `explorer`, so project maps and orientation notes guide its search
 

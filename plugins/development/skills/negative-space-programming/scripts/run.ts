@@ -88,7 +88,7 @@ export function resolveNodeBin(packageName: string, binName: string, cwd: string
   try {
     manifestPath = require.resolve(`${packageName}/package.json`);
   } catch {
-    return null;   // named recovery: not installed here; the caller reports NotInstalled
+    return null; // named recovery: not installed here; the caller reports NotInstalled
   }
 
   let manifest: { readonly bin?: string | Record<string, string> };

@@ -12,7 +12,6 @@ function git(cwd: string, ...args: string[]): void {
 }
 
 function withRepo(work: (root: string) => void): void {
-  // `.native` expands Windows 8.3 short names (THOREH~1) the way git reports the root.
   const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'build-check-repo-')));
   try {
     git(root, 'init', '-q');
