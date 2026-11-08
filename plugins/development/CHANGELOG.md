@@ -6,6 +6,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-11-08
+
+### Changed
+
+- Let `coder` inherit the main session's tools instead of a fixed list, which also gives it the `Skill` tool back
+- Let `verifier` use every tool except `Edit`, `Write`, `NotebookEdit` and `batch_edit` instead of a fixed list
+- Load CLAUDE.md files in `explorer`, so project maps and orientation notes guide its search
+
+### Removed
+
+- Remove the Bash guard hook; Bash calls of `coder` and `verifier` go through the normal permission settings
+
 ## [1.4.0] - 2026-11-02
 
 ### Changed
@@ -79,7 +91,8 @@ _First release._
 
 - Add `negative-space-programming` skill
 
-[unreleased]: https://github.com/thoeltig/skills-collection/compare/Development_v1.4.0...HEAD
+[unreleased]: https://github.com/thoeltig/skills-collection/compare/Development_v1.4.1...HEAD
+[1.4.1]: https://github.com/thoeltig/skills-collection/compare/Development_v1.4.0...Development_v1.4.1
 [1.4.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.3.0...Development_v1.4.0
 [1.3.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.2.0...Development_v1.3.0
 [1.2.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.1.0...Development_v1.2.0
