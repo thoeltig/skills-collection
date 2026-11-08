@@ -6,6 +6,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-08
+
+### Changed
+
+- Make `verifier` a code review only: it runs no builds or tests and expects a change that already builds and passes
+- Run the build check only around `coder`; `verifier` no longer gets the start state
+- Run the build check on every `coder` stop, also when nothing changed
+
+### Removed
+
+- Remove the build check's result cache and tree hash
+- Remove the sweep of session data left by sessions that never ended
+
 ## [1.4.1] - 2026-11-08
 
 ### Changed
@@ -91,7 +104,8 @@ _First release._
 
 - Add `negative-space-programming` skill
 
-[unreleased]: https://github.com/thoeltig/skills-collection/compare/Development_v1.4.1...HEAD
+[unreleased]: https://github.com/thoeltig/skills-collection/compare/Development_v1.5.0...HEAD
+[1.5.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.4.1...Development_v1.5.0
 [1.4.1]: https://github.com/thoeltig/skills-collection/compare/Development_v1.4.0...Development_v1.4.1
 [1.4.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.3.0...Development_v1.4.0
 [1.3.0]: https://github.com/thoeltig/skills-collection/compare/Development_v1.2.0...Development_v1.3.0

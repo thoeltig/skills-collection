@@ -24,7 +24,7 @@ Three agents for delegating work from a main session. Each brief must carry ever
 |---|---|---|
 | `coder` | sonnet by default; haiku or opus per call | Implements a change from a brief (goal, area, constraints, out of scope), stops and asks when the brief is ambiguous, reports changes, verification, assumptions and what was not done |
 | `explorer` | haiku | Read-only search; answers with verbatim excerpts and `path:start-end` ranges, plus what it searched |
-| `verifier` | opus | Reviews a finished change from a ref range, uncommitted changes or a worktree, given the goal, constraints and non-goals; separates confirmed issues with evidence from suspicions; never edits |
+| `verifier` | opus | Reviews a finished change from a ref range, uncommitted changes or a worktree, given the goal, constraints and non-goals; separates confirmed issues with evidence from suspicions; code review only, runs no builds or tests; never edits |
 
 The `coder` description tells the main session which model fits a brief. The `explorer` also uses the `batch_read` and project-intel `query` tools when those plugins are installed.
 
@@ -32,11 +32,11 @@ The `coder` description tells the main session which model fits a brief. The `ex
 
 Runs the project's build and tests around delegated work, so an agent knows what was already broken and cannot finish having broken something new.
 
-- **When an agent starts** (`coder`, `verifier`), it gets the current state as context. Green looks like this: `Build check at start: Build green · Tests 97/97 green`. Problems that already exist are listed and labelled as pre-existing.
-- **When a `coder` stops** after changing files, the checks run again. New problems block the stop and are fed back: findings or failing tests the start state did not have, or a step that no longer runs. The hook blocks at most 3 times, and not again when the same problems remain. It then lets the agent finish and tells you.
+- **When a `coder` starts**, it gets the current state as context. Green looks like this: `Build check at start: Build green · Tests 97/97 green`. Problems that already exist are listed and labelled as pre-existing.
+- **When a `coder` stops**, the checks run again. New problems block the stop and are fed back: findings or failing tests the start state did not have, or a step that no longer runs. The hook blocks at most 3 times, and not again when the same problems remain. It then lets the agent finish and tells you.
 - **The main session is not checked.**
 
-The output is a headline per step, then findings grouped by code. Tests failing for one cause are grouped as well. Output is capped at 15 lines per step. Results are cached per tree state and session. Everything is deleted when the session ends; data of sessions that never ended is swept after 7 days.
+The output is a headline per step, then findings grouped by code. Tests failing for one cause are grouped as well. Output is capped at 15 lines per step. Everything is deleted when the session ends; a session that crashes leaves its few small files behind.
 
 ### Configuration
 
@@ -61,12 +61,12 @@ In a worktree the config is read from the worktree first, then from the main pro
 
 ### Things to know
 
-- **An agent waits for the check before it starts.** Point the test step at fast tests: a full suite with integration tests that wait on unavailable services can take many minutes. Repeat starts on an unchanged tree reuse the cached result.
+- **A `coder` waits for the check before it starts and before it finishes.** Point the test step at fast tests: a full suite with integration tests that wait on unavailable services can take many minutes.
 - **The config runs code.** Building and testing executes the project's build scripts and tests, without a permission prompt. Only add a config to projects you trust, the same as project hooks.
 - `dotnet-test` needs xUnit v3 on Microsoft.Testing.Platform (`global.json` runner). It uses xUnit's own `--report-xunit-trx`.
 - `dotnet-build` treats warnings as errors, like the filter does, so NuGet audit warnings appear as problems. That is harmless, because only new ones block.
 - Two agents in the same folder never build at once; the second one waits, or skips with a message when the budget runs out.
-- Requires Node ≥ 22.18 and git; outside a git repository nothing is cached.
+- Requires Node ≥ 22.18. The checks run at the git repository root, or in the agent's folder outside a repository.
 
 ## Installation
 
