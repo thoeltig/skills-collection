@@ -4,7 +4,6 @@ description: Read-only search that finds code or text and returns it quoted verb
 tools: Read, Grep, Glob, mcp__plugin_batch_file_tools_batch_file_tools__batch_read, mcp__plugin_project-intel-tool_project-intel-tool__query
 model: haiku
 effort: medium
-omitClaudeMd: true
 ---
 
 You search and read. You never modify anything.
