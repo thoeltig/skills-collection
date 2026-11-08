@@ -4,7 +4,6 @@
  *
  *   {"steps":[{"tool":"dotnet-build","args":["App.sln"]},{"tool":"dotnet-test","args":["--solution","App.sln"],"timeoutSeconds":900}]}
  */
-import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 
@@ -31,8 +30,6 @@ export interface Step {
 export interface Config {
   readonly path: string;
   readonly steps: readonly Step[];
-  /** Changes whenever the steps do, so cached results of another configuration are never reused. */
-  readonly hash: string;
 }
 
 export type ConfigState =
@@ -86,8 +83,7 @@ export function parseConfig(text: string, path: string): ConfigState {
   if (total > BUDGET_SECONDS) {
     return { status: 'invalid', path, reason: `step timeouts add up to ${total} s, more than the ${BUDGET_SECONDS} s budget` };
   }
-  const hash = createHash('sha1').update(JSON.stringify(parsed)).digest('hex').slice(0, 12);
-  return { status: 'ok', config: { path, steps: parsed, hash } };
+  return { status: 'ok', config: { path, steps: parsed } };
 }
 
 /**

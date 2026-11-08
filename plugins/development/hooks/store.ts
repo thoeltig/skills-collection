@@ -1,18 +1,13 @@
 /**
- * The hook's files under the plugin data folder: per session a result cache keyed by tree and
- * configuration, one baseline per agent and a log; across sessions one lock per checked folder.
- * A session's folder is deleted when the session ends; folders of sessions that never ended
- * (a crash) are swept after `STALE_SESSION_MS`.
+ * The hook's files under the plugin data folder: per session one baseline per agent and a log;
+ * across sessions one lock per checked folder. A session's folder is deleted when the session ends.
  */
 import { createHash } from 'node:crypto';
-import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { assert } from '../skills/negative-space-programming/scripts/contract.ts';
 
 const ID = /^[A-Za-z0-9_-]{1,128}$/;
-/** Cached results kept per session; a long session with many edits must not grow without bound. */
-export const MAX_CACHED_RESULTS = 20;
-export const STALE_SESSION_MS = 7 * 24 * 60 * 60 * 1000;
 const LOCK_POLL_MS = 1000;
 /** The hook timeout in hooks.json: a lock older than that belongs to a run the timeout killed. */
 export const LOCK_STALE_MS = 1_800_000;
@@ -42,24 +37,8 @@ export function appendLog(sessionDir: string, record: Readonly<Record<string, un
   appendFileSync(join(sessionDir, 'build-check.log'), `${JSON.stringify({ at: new Date().toISOString(), ...record })}\n`);
 }
 
-/** Deletes the oldest cached results beyond `keep`. */
-export function pruneResults(resultsDir: string, keep: number = MAX_CACHED_RESULTS): void {
-  if (!existsSync(resultsDir)) return;
-  const files = readdirSync(resultsDir)
-    .map((name) => ({ path: join(resultsDir, name), modified: statSync(join(resultsDir, name)).mtimeMs }))
-    .sort((left, right) => right.modified - left.modified);
-  for (const file of files.slice(keep)) rmSync(file.path, { force: true });
-}
-
-/** Removes this session's folder, and any other session folder untouched for longer than `staleMs`. */
-export function cleanSessions(dataRoot: string, sessionId: string, now: number, staleMs: number = STALE_SESSION_MS): void {
+export function cleanSession(dataRoot: string, sessionId: string): void {
   rmSync(sessionDirectory(dataRoot, sessionId), { recursive: true, force: true });
-  const sessions = join(dataRoot, 'sessions');
-  if (!existsSync(sessions)) return;
-  for (const name of readdirSync(sessions)) {
-    const path = join(sessions, name);
-    if (now - statSync(path).mtimeMs > staleMs) rmSync(path, { recursive: true, force: true });
-  }
 }
 
 export function lockPath(dataRoot: string, folder: string): string {

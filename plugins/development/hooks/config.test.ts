@@ -60,13 +60,6 @@ test('derives each step kind from its tool and defaults args and timeout', () =>
   ]);
 });
 
-test('a different configuration gets a different hash', () => {
-  const one = parseConfig('{"steps":[{"tool":"tsc"}]}', 'c.json');
-  const two = parseConfig('{"steps":[{"tool":"tsc","args":["tsconfig.app.json"]}]}', 'c.json');
-  expect.ok(one.status === 'ok' && two.status === 'ok');
-  expect.notEqual(one.config.hash, two.config.hash);
-});
-
 for (const [name, text, fragment] of [
   ['not JSON', '{steps:', 'not valid JSON'],
   ['no steps', '{"steps":[]}', 'steps must be an array'],

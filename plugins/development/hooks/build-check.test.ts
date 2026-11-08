@@ -15,7 +15,6 @@ interface Harness {
   readonly deps: Dependencies;
   readonly project: string;
   readonly dataRoot: string;
-  tree: string | undefined;
   build: Finding[];
   failing: Finding[];
   runs: number;
@@ -34,7 +33,6 @@ function withHarness(work: (harness: Harness) => void, config: string | null = C
     const harness: Harness = {
       project,
       dataRoot: join(base, 'data'),
-      tree: 'tree-a',
       build: [],
       failing: [],
       runs: 0,
@@ -45,7 +43,6 @@ function withHarness(work: (harness: Harness) => void, config: string | null = C
       dataRoot: harness.dataRoot,
       now: Date.now,
       gitRoot: () => project,
-      treeHash: () => harness.tree,
       runner: (step) => {
         harness.runs++;
         return step.kind === 'build' ? report(step.tool, harness.build) : report(step.tool, harness.failing);
@@ -93,35 +90,18 @@ test('tells the user, not the agent, about an invalid configuration', () => {
   }, '{"steps":[{"tool":"make"}]}');
 });
 
-test('an agent that changed nothing stops without a second run', () => {
-  withHarness((harness) => {
-    handle(input('SubagentStart', harness), harness.deps);
-    expect.equal(handle(input('SubagentStop', harness), harness.deps), undefined);
-    expect.equal(harness.runs, 2);
-  });
-});
-
-test('reuses the cached result for an unchanged tree', () => {
-  withHarness((harness) => {
-    handle(input('SubagentStart', harness), harness.deps);
-    handle({ ...input('SubagentStart', harness), agentId: 'agent-2' }, harness.deps);
-    expect.equal(harness.runs, 2);
-  });
-});
-
-test('a stop without new problems passes, even when old ones remain', () => {
+test('a stop runs the checks again and passes without new problems, even when old ones remain', () => {
   withHarness((harness) => {
     harness.failing = [brokenTest];
     handle(input('SubagentStart', harness), harness.deps);
-    harness.tree = 'tree-b';
     expect.equal(handle(input('SubagentStop', harness), harness.deps), undefined);
+    expect.equal(harness.runs, 4);
   });
 });
 
 test('blocks a stop that left a new problem behind, naming only the new one', () => {
   withHarness((harness) => {
     handle(input('SubagentStart', harness), harness.deps);
-    harness.tree = 'tree-b';
     harness.failing = [brokenTest];
     const output = handle(input('SubagentStop', harness), harness.deps) as { decision: string; reason: string };
     expect.equal(output.decision, 'block');
@@ -133,9 +113,7 @@ test('lets the agent finish and tells the user when the same problems remain aft
   withHarness((harness) => {
     handle(input('SubagentStart', harness), harness.deps);
     harness.failing = [brokenTest];
-    harness.tree = 'tree-b';
     expect.equal((handle(input('SubagentStop', harness), harness.deps) as { decision: string }).decision, 'block');
-    harness.tree = 'tree-c';
     const output = handle(input('SubagentStop', harness), harness.deps) as { systemMessage: string };
     expect.match(output.systemMessage, /^Build check: development:coder finished with problems its changes introduced/);
   });
@@ -146,7 +124,6 @@ test(`blocks at most ${MAX_BLOCKS} times even while the problems keep changing`,
     handle(input('SubagentStart', harness), harness.deps);
     const decisions: string[] = [];
     for (let round = 0; round <= MAX_BLOCKS; round++) {
-      harness.tree = `tree-${round}`;
       harness.failing = [{ ...brokenTest, test: `T.A.Round${round}` }];
       const output = handle(input('SubagentStop', harness), harness.deps) as { decision?: string; systemMessage?: string };
       decisions.push(output.decision ?? 'finish');

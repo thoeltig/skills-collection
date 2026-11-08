@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import expect from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { cleanSessions, isSafeId, lockPath, pruneResults, sessionDirectory, withLock } from './store.ts';
+import { cleanSession, isSafeId, lockPath, sessionDirectory, withLock } from './store.ts';
 
 function withDir(work: (dir: string) => void): void {
   const dir = mkdtempSync(join(tmpdir(), 'build-check-store-'));
@@ -28,28 +28,17 @@ test('refuses ids that could leave the data folder', () => {
   expect.throws(() => sessionDirectory('/data', '../escape'), /sessionId must match/);
 });
 
-test('keeps only the newest cached results', () => {
+test('removes the ending session and keeps other sessions', () => {
   withDir((dir) => {
-    for (let index = 0; index < 5; index++) {
-      writeFileSync(join(dir, `${index}.json`), '{}');
-      age(join(dir, `${index}.json`), (5 - index) * 1000);
-    }
-    pruneResults(dir, 2);
-    expect.deepEqual(readdirSync(dir).sort(), ['3.json', '4.json']);
-  });
-});
-
-test('removes the ending session and stale ones, keeps other live sessions', () => {
-  withDir((dir) => {
-    for (const id of ['ending', 'live', 'crashed']) mkdirSync(sessionDirectory(dir, id), { recursive: true });
-    age(sessionDirectory(dir, 'crashed'), 8 * 24 * 60 * 60 * 1000);
-    cleanSessions(dir, 'ending', Date.now());
-    expect.deepEqual(readdirSync(join(dir, 'sessions')), ['live']);
+    for (const id of ['ending', 'live']) mkdirSync(sessionDirectory(dir, id), { recursive: true });
+    cleanSession(dir, 'ending');
+    expect.equal(existsSync(sessionDirectory(dir, 'ending')), false);
+    expect.equal(existsSync(sessionDirectory(dir, 'live')), true);
   });
 });
 
 test('cleaning a session that never wrote anything is a no-op', () => {
-  withDir((dir) => expect.doesNotThrow(() => cleanSessions(dir, 'never', Date.now())));
+  withDir((dir) => expect.doesNotThrow(() => cleanSession(dir, 'never')));
 });
 
 test('runs work under the lock and releases it, also when the work throws', () => {

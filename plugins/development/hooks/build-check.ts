@@ -9,9 +9,9 @@ import { join } from 'node:path';
 import { isEntryPoint } from '../skills/negative-space-programming/scripts/contract.ts';
 import { runStep, runSteps, type StepOutcome, type StepRunner } from './checks.ts';
 import { BUDGET_SECONDS, loadConfig, type Config } from './config.ts';
-import { appendLog, cleanSessions, isSafeId, lockPath, pruneResults, readJson, sessionDirectory, withLock, writeJson } from './store.ts';
+import { appendLog, cleanSession, isSafeId, lockPath, readJson, sessionDirectory, withLock, writeJson } from './store.ts';
 import { describeState, findRegressions } from './summary.ts';
-import { gitRoot, treeHash } from './workspace.ts';
+import { gitRoot } from './workspace.ts';
 
 /** Blocks per agent before the hook lets it finish and tells the user instead. */
 export const MAX_BLOCKS = 3;
@@ -30,14 +30,12 @@ export interface Dependencies {
   readonly runner: StepRunner;
   readonly now: () => number;
   readonly gitRoot: (cwd: string) => string | undefined;
-  readonly treeHash: (root: string) => string | undefined;
 }
 
 export type HookOutput = Readonly<Record<string, unknown>> | undefined;
 
 /** What an agent started from, kept until its stop is compared against it. */
 interface AgentBaseline {
-  readonly treeHash: string | undefined;
   readonly steps: readonly StepOutcome[];
   readonly blocks: number;
   readonly lastKeys: readonly string[];
@@ -47,12 +45,6 @@ interface Active {
   readonly root: string;
   readonly sessionDir: string;
   readonly config: Config;
-}
-
-interface Evaluation {
-  readonly treeHash: string | undefined;
-  readonly steps: readonly StepOutcome[];
-  readonly cached: boolean;
 }
 
 /** Parses the hook's stdin; undefined for input this hook cannot act on safely. */
@@ -84,23 +76,12 @@ function isActive(value: Active | HookOutput): value is Active {
   return value !== undefined && 'config' in value;
 }
 
-/** The steps' outcome for the tree as it is now: cached when the tree and configuration are unchanged. */
-function evaluate(active: Active, deps: Dependencies): Evaluation | undefined {
-  const { root, sessionDir, config } = active;
-  const tree = deps.treeHash(root);
-  const cachePath = tree === undefined ? undefined : join(sessionDir, 'results', `${tree}-${config.hash}.json`);
-  const cached = cachePath === undefined ? undefined : readJson<StepOutcome[]>(cachePath);
-  if (cached !== undefined) return { treeHash: tree, steps: cached, cached: true };
-
+/** Runs the steps under the folder's lock; undefined when another check held it for the whole wait. */
+function evaluate(active: Active, deps: Dependencies): StepOutcome[] | undefined {
+  const { root, config } = active;
   const stepSeconds = config.steps.reduce((sum, step) => sum + step.timeoutSeconds, 0);
   const waitMs = (BUDGET_SECONDS - stepSeconds) * 1000;
-  const steps = withLock(lockPath(deps.dataRoot, root), waitMs, () => runSteps(config.steps, root, deps.runner), deps.now);
-  if (steps === undefined) return undefined;
-  if (cachePath !== undefined) {
-    writeJson(cachePath, steps);
-    pruneResults(join(sessionDir, 'results'));
-  }
-  return { treeHash: tree, steps, cached: false };
+  return withLock(lockPath(deps.dataRoot, root), waitMs, () => runSteps(config.steps, root, deps.runner), deps.now);
 }
 
 function busy(active: Active): HookOutput {
@@ -112,13 +93,13 @@ function onSubagentStart(input: HookInput, deps: Dependencies): HookOutput {
   const active = activate(input, deps);
   if (!isActive(active)) return active;
   const started = deps.now();
-  const evaluation = evaluate(active, deps);
-  if (evaluation === undefined) return busy(active);
+  const steps = evaluate(active, deps);
+  if (steps === undefined) return busy(active);
 
-  const baseline: AgentBaseline = { treeHash: evaluation.treeHash, steps: evaluation.steps, blocks: 0, lastKeys: [] };
+  const baseline: AgentBaseline = { steps, blocks: 0, lastKeys: [] };
   writeJson(join(active.sessionDir, 'agents', `${input.agentId}.json`), baseline);
-  const state = describeState(evaluation.steps, active.root);
-  appendLog(active.sessionDir, { event: input.event, agent: input.agentId, tree: evaluation.treeHash, cached: evaluation.cached, ms: deps.now() - started, state: state.split('\n')[0] });
+  const state = describeState(steps, active.root);
+  appendLog(active.sessionDir, { event: input.event, agent: input.agentId, ms: deps.now() - started, state: state.split('\n')[0] });
   const context = state.includes('\n')
     ? `Build check at start. These problems exist before you change anything:\n${state}`
     : `Build check at start: ${state}`;
@@ -137,12 +118,11 @@ function onSubagentStop(input: HookInput, deps: Dependencies): HookOutput {
   const baseline = readJson<AgentBaseline>(baselinePath);
   if (baseline === undefined) return undefined;
 
-  const tree = deps.treeHash(active.root);
-  if (tree !== undefined && tree === baseline.treeHash) return undefined;
-  const evaluation = evaluate(active, deps);
-  if (evaluation === undefined) return busy(active);
-  const regressions = findRegressions(baseline.steps, evaluation.steps, active.root);
-  appendLog(active.sessionDir, { event: input.event, agent: input.agentId, tree: evaluation.treeHash, cached: evaluation.cached, regressions: regressions?.keys.length ?? 0, blocks: baseline.blocks });
+  const started = deps.now();
+  const steps = evaluate(active, deps);
+  if (steps === undefined) return busy(active);
+  const regressions = findRegressions(baseline.steps, steps, active.root);
+  appendLog(active.sessionDir, { event: input.event, agent: input.agentId, ms: deps.now() - started, regressions: regressions?.keys.length ?? 0, blocks: baseline.blocks });
   if (regressions === undefined) return undefined;
 
   if (baseline.blocks >= MAX_BLOCKS || sameKeys(regressions.keys, baseline.lastKeys)) {
@@ -160,7 +140,7 @@ export function handle(input: HookInput, deps: Dependencies): HookOutput {
     case 'SubagentStop':
       return onSubagentStop(input, deps);
     case 'SessionEnd':
-      cleanSessions(deps.dataRoot, input.sessionId, deps.now());
+      cleanSession(deps.dataRoot, input.sessionId);
       return undefined;
     default:
       return undefined;
@@ -169,7 +149,7 @@ export function handle(input: HookInput, deps: Dependencies): HookOutput {
 
 export function defaultDependencies(env: NodeJS.ProcessEnv): Dependencies {
   const pluginData = env['CLAUDE_PLUGIN_DATA'] ?? join(tmpdir(), 'skills-collection');
-  return { env, dataRoot: join(pluginData, 'build-check'), runner: runStep, now: Date.now, gitRoot, treeHash };
+  return { env, dataRoot: join(pluginData, 'build-check'), runner: runStep, now: Date.now, gitRoot };
 }
 
 function main(): number {
