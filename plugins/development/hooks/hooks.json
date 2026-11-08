@@ -2,7 +2,7 @@
   "hooks": {
     "SubagentStart": [
       {
-        "matcher": "^development:(coder|verifier)$",
+        "matcher": "^development:coder$",
         "hooks": [
           {
             "type": "command",
